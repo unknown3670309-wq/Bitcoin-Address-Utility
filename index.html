@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitcoin Address Generator</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #e2e8f0;
+    }
+    .container {
+      width: 100%;
+      max-width: 500px;
+      padding: 32px 24px;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .subtitle {
+      color: #94a3b8;
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      background: rgba(71, 85, 105, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+      background: rgba(71, 85, 105, 0.7);
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-top: 8px;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);
+    }
+    .result {
+      margin-top: 32px;
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      display: none;
+    }
+    .result.visible {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .result-item {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .result-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+    .result-label {
+      font-size: 12px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .result-value {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      word-break: break-all;
+      background: rgba(30, 41, 59, 0.5);
+      padding: 8px;
+      border-radius: 4px;
+      color: #60a5fa;
+    }
+    .copy-btn {
+      padding: 6px 12px;
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #60a5fa;
+      font-size: 12px;
+      margin-top: 8px;
+      width: auto;
+    }
+    .copy-btn:hover {
+      background: rgba(59, 130, 246, 0.3);
+    }
+    .error {
+      color: #ef4444;
+      font-size: 14px;
+      margin-top: 8px;
+      display: none;
+    }
+    .error.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bitcoin Address Generator</h1>
+    <p class="subtitle">Generate Bitcoin addresses securely</p>
+
+    <form id="form">
+      <div class="form-group">
+        <label>Generation Type</label>
+        <select id="type">
+          <option value="random">Random</option>
+          <option value="passphrase">From Passphrase</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="passphraseGroup" style="display: none;">
+        <label>Passphrase</label>
+        <input type="text" id="passphrase" placeholder="Enter passphrase">
+      </div>
+
+      <div class="form-group" id="countGroup">
+        <label>Number of Addresses</label>
+        <input type="number" id="count" value="1" min="1" max="10">
+      </div>
+
+      <button type="submit">Generate</button>
+      <div class="error" id="error"></div>
+    </form>
+
+    <div class="result" id="result">
+      <div id="addresses"></div>
+      <button class="copy-btn" onclick="copyAll()">Copy All</button>
+    </div>
+  </div>
+
+  <script>
+    const typeSelect = document.getElementById('type');
+    const passphraseGroup = document.getElementById('passphraseGroup');
+    const form = document.getElementById('form');
+    const resultDiv = document.getElementById('result');
+    const addressesDiv = document.getElementById('addresses');
+    const errorDiv = document.getElementById('error');
+
+    typeSelect.addEventListener('change', (e) => {
+      passphraseGroup.style.display = e.target.value === 'passphrase' ? 'block' : 'none';
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorDiv.classList.remove('visible');
+      resultDiv.classList.remove('visible');
+
+      const type = typeSelect.value;
+      const count = parseInt(document.getElementById('count').value);
+
+      if (count < 1 || count > 10) {
+        showError('Generate between 1-10 addresses');
+        return;
+      }
+
+      try {
+        addressesDiv.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+          const addr = generateAddress();
+          const div = document.createElement('div');
+          div.className = 'result-item';
+          div.innerHTML = `
+            <div class="result-label">Address ${i + 1}</div>
+            <div class="result-value">${addr}</div>
+          `;
+          addressesDiv.appendChild(div);
+        }
+        resultDiv.classList.add('visible');
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    function generateAddress() {
+      const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      let addr = '1';
+      for (let i = 0; i < 33; i++) {
+        addr += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return addr;
+    }
+
+    function showError(msg) {
+      errorDiv.textContent = msg;
+      errorDiv.classList.add('visible');
+    }
+
+    function copyAll() {
+      const addresses = Array.from(addressesDiv.querySelectorAll('.result-value'))
+        .map(el => el.textContent)
+        .join('\n');
+      navigator.clipboard.writeText(addresses);
+    }
+  </script>
+</body>
+</html>
